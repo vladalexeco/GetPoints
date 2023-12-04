@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml>
+<Document>
+<name>Waypoints</name>
+<visibility>1</visibility>
+<LookAt>
+<longitude></longitude>
+<latitude></latitude>
+<range>10000</range>
+</LookAt>
+<Style id="waypoint">
+<icon><href>root://icons/palette-3.png?x=192&amp;y=96&amp;w=32&amp;h=32</href></icon>
+</Style>
+</Document>
+</kml>
