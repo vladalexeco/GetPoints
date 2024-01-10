@@ -1,4 +1,4 @@
-from functions import gpx_to_excel, proj4_to_dict, gpx_to_msk_txt, gpx_to_kml, kml_to_gpx, check_extension, total_table, txt_msk_to_exl, autocad_msk_to_exl, xls_to_kml, xls_to_gpx
+from functions import gpx_to_excel, proj4_to_dict, gpx_to_msk_txt, gpx_to_kml, kml_to_gpx, check_extension, total_table, txt_msk_to_exl, autocad_msk_to_exl, xls_to_kml, xls_to_gpx, xls_journal_to_gpx
 import sys, os
 import pickle
 from datetime import datetime
@@ -276,6 +276,8 @@ class Window(QWidget):
 		self.btnGpxToKml = QPushButton('GPX в KML')
 		self.btnKmlToGpx = QPushButton('KML в GPX')
 		self.btnMerge = QPushButton('Компоновка')
+
+		self.btnJournal = QPushButton("В журнал")
 		# --end--
 
 		# toolTips for buttons
@@ -308,7 +310,9 @@ class Window(QWidget):
 		header.setStretchLastSection(True)
 
 		self.hbox_1.addWidget(self.btnMerge)
-		self.hbox_1.addStretch(1)
+
+		self.hbox_1.addWidget(self.btnJournal)
+		
 		self.hbox_1.addWidget(self.btnAdd)
 		self.hbox_1.addWidget(self.btnDel)
 		self.hbox_1.addWidget(self.btnGpxToKml)
@@ -335,12 +339,52 @@ class Window(QWidget):
 		self.btnGpxToKml.clicked.connect(self.on_btnGpxToKml)
 		self.btnKmlToGpx.clicked.connect(self.on_btnKmlToGpx)
 		self.btnMerge.clicked.connect(self.on_btnMerge)
+
+		self.btnJournal.clicked.connect(self.on_btnJournal)
 		
 		self.btnParam.clicked.connect(self.dialog.exec)
 
 		self.table.cellClicked.connect(self.cell_was_clicked)
 	
 	# Button clicked events
+	def on_btnJournal(self):
+		
+		try:
+			with open('data_atr.pickle', 'rb') as file:
+				atr_dict = pickle.load(file)
+
+			path_f = atr_dict['path']
+		except:
+			path_f = os.getcwd()
+
+
+		if self.total: 
+			
+			if check_extension(".xls", self.total) and len(self.total) == 1:
+				
+				path = QFileDialog.getSaveFileName(self, 'Сохранить файл', path_f, 'GPX(*.gpx)')
+				
+				if path != "":
+					
+					try:
+						xls_journal_to_gpx(self.total, path[0])
+					except:
+						QMessageBox.information(self, "Сообщение", "Что-то пошло не так. Проверьте формат правильность заполнения .xls файла.")
+					else:
+						QMessageBox.information(self, 'Сообщение', 'Информация сконвертирована в файл .gpx формат', QMessageBox.Ok)
+
+						atr_dict["path"] = os.path.dirname(path[0])
+
+						with open('data_atr.pickle', 'wb') as file:
+							pickle.dump(atr_dict, file)
+					
+			else:
+				QMessageBox.information(self, 'Сообщение', 'Неверный формат файла или файлов больше, чем один', QMessageBox.Ok)
+
+		else:
+			QMessageBox.information(self, 'Сообщение', 'Пустая таблица', QMessageBox.Ok)
+
+
 	def on_btnAdd(self):
 		try:
 			path_f = atr_dict['path']

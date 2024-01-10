@@ -5,7 +5,89 @@ import pyproj
 import datetime
 import os, sys 
 from decimal import Decimal, ROUND_HALF_UP
+from journal_point import JournalPoint
 
+def xls_journal_to_gpx(a_list, address):
+	
+	file = a_list[0]
+	book = xlrd.open_workbook(file)
+	sheet = book.sheet_by_index(0)
+
+	result = []
+
+	for i in range(1, sheet.nrows):
+		
+		currentList = []
+		
+		for j in range(sheet.ncols):
+			currentList.append(sheet.cell(i, j).value)
+
+		result.append(JournalPoint(
+			id = int(currentList[0]), 
+			latitude = coordMinToCoordFract(currentList[1].replace(",", ".")), 
+			longitude = coordMinToCoordFract(currentList[2].replace(",", ".")), 
+			search = currentList[3],
+			mad = currentList[4],
+			madError = round(currentList[5], 3),
+			date = currentList[6],
+			time = currentList[7]
+			))
+
+	tree = et.parse('templates/gpx_template.gpx')
+	root = tree.getroot()
+
+	now = datetime.datetime.now()
+
+	time_string = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+	metadata = root.find("metadata")
+	time = metadata.find("time")
+	time.text = time_string
+
+	for journalPoint in result:
+		wpt = et.SubElement(root, "wpt", lat=str(journalPoint.latitude), lon=str(journalPoint.longitude))
+		name = et.SubElement(wpt, "name")
+		name.text = str(journalPoint.id)
+
+		splitDate = journalPoint.date.split(".")
+
+		splitDate.reverse()
+
+		formatedDate = "-".join(splitDate)
+
+		time = et.SubElement(wpt, "time")
+		time.text = f"{formatedDate}T{journalPoint.time}Z"
+
+		cmt = et.SubElement(wpt, "cmt")
+		cmt.text = f"Поиск {journalPoint.search} МАЭД {journalPoint.mad} Ошибка МАД {journalPoint.madError}"
+
+	tree.write(address, encoding='utf-8')
+
+	with open(address, 'r', encoding='utf-8') as file:
+		list_file = file.readlines()
+		list_file[0] = '<gpx xmlns="http://www.topografix.com/GPX/1/1" creator="OziExplorer Version 3955k - http://www.oziexplorer.com" version="1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">\n' 
+		list_file.insert(0, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n')
+
+	with open(address, 'w', encoding='utf-8') as file:
+		for string in list_file:
+			file.write(string)
+
+	format_file(address)
+
+	
+def coordMinToCoordFract(coord, separators = ["°", "\'"]):
+	"""Transform coordinate with minutes and seconds to coordinate with fraction part"""
+	listOfCoord = coordMinStrToList(coord, separators)
+	coordFract = float(listOfCoord[0]) + float(listOfCoord[1]) / 60 + float(listOfCoord[2]) / 3600
+	return round(coordFract, 7)
+
+
+def coordMinStrToList(coord, separators):
+	"""Transform string coordinate with minutes and seconds to list. Example 36°24'59.124'' converts to [36, 24, 59.124]"""
+	degree, rightPart = coord.split(separators[0])
+	minute, second = rightPart.split(separators[1], 1)
+	second = second[:-2]
+	return [degree, minute, second]
 
 def trueRound(num):
 	decimal_num = Decimal(str(num))
