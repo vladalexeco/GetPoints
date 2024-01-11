@@ -6,6 +6,14 @@ import datetime
 import os, sys 
 from decimal import Decimal, ROUND_HALF_UP
 from journal_point import JournalPoint
+import random
+
+def getFormatedDateAndTime(journalPoint):
+	splitDate = journalPoint.date.split(".")
+	splitDate.reverse()
+	formatedDate = "-".join(splitDate)
+
+	return f"{formatedDate}T{journalPoint.time}Z"
 
 def xls_journal_to_gpx(a_list, address):
 	
@@ -36,37 +44,53 @@ def xls_journal_to_gpx(a_list, address):
 	tree = et.parse('templates/gpx_template.gpx')
 	root = tree.getroot()
 
-	now = datetime.datetime.now()
-
-	time_string = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-
 	metadata = root.find("metadata")
+
+	bounds = metadata.find("bounds")
+
+	if bounds is not None:
+		metadata.remove(bounds)
+
+	link = et.SubElement(metadata, "link", href="http://www.garmin.com")
+	textLink = et.SubElement(link, "text")
+	textLink.text = "Garmin International"
+
 	time = metadata.find("time")
-	time.text = time_string
+
+	if time is not None:
+		metadata.remove(time)
+
+	time = et.SubElement(metadata, "time")
+
+	firstJournalPoint = result[0]
+
+	time.text = getFormatedDateAndTime(firstJournalPoint)
 
 	for journalPoint in result:
+		
 		wpt = et.SubElement(root, "wpt", lat=str(journalPoint.latitude), lon=str(journalPoint.longitude))
+		
+		ele = et.SubElement(wpt, "ele")
+		ele.text = str(round(random.randint(-2, 6) + random.random(), 6))
+
+		time = et.SubElement(wpt, "time")
+		time.text = getFormatedDateAndTime(journalPoint)
+
 		name = et.SubElement(wpt, "name")
 		name.text = str(journalPoint.id)
 
-		splitDate = journalPoint.date.split(".")
-
-		splitDate.reverse()
-
-		formatedDate = "-".join(splitDate)
-
-		time = et.SubElement(wpt, "time")
-		time.text = f"{formatedDate}T{journalPoint.time}Z"
-
 		cmt = et.SubElement(wpt, "cmt")
 		cmt.text = f"Поиск {journalPoint.search} МАЭД {journalPoint.mad} Ошибка МАД {journalPoint.madError}"
+
+		sym = et.SubElement(wpt, "sym")
+		sym.text = "Block, Red"
 
 	tree.write(address, encoding='utf-8')
 
 	with open(address, 'r', encoding='utf-8') as file:
 		list_file = file.readlines()
-		list_file[0] = '<gpx xmlns="http://www.topografix.com/GPX/1/1" creator="OziExplorer Version 3955k - http://www.oziexplorer.com" version="1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">\n' 
-		list_file.insert(0, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n')
+		list_file[0] = '<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3" xmlns:wptx1="http://www.garmin.com/xmlschemas/WaypointExtension/v1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" creator="GPSMAP 64" version="1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 http://www8.garmin.com/xmlschemas/GpxExtensionsv3.xsd http://www.garmin.com/xmlschemas/TrackStatsExtension/v1 http://www8.garmin.com/xmlschemas/TrackStatsExtension.xsd http://www.garmin.com/xmlschemas/WaypointExtension/v1 http://www8.garmin.com/xmlschemas/WaypointExtensionv1.xsd http://www.garmin.com/xmlschemas/TrackPointExtension/v1 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd">\n' 
+		list_file.insert(0, '<?xml version="1.0" encoding="UTF-8" standalone="no" ?>\n')
 
 	with open(address, 'w', encoding='utf-8') as file:
 		for string in list_file:
