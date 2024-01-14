@@ -1,12 +1,13 @@
-from functions import gpx_to_excel, proj4_to_dict, gpx_to_msk_txt, gpx_to_kml, kml_to_gpx, check_extension, total_table, txt_msk_to_exl, autocad_msk_to_exl, xls_to_kml, xls_to_gpx, xls_journal_to_gpx
-import sys, os
+from functions import *
 import pickle
 from datetime import datetime
-from PyQt5.QtWidgets import (QWidget, QApplication, QDesktopWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QHeaderView, QFileDialog, QTableWidgetSelectionRange, 
-	QMessageBox, QCheckBox, QComboBox, QDialog, QRadioButton, QSpinBox, QLabel, QSizePolicy)
+from PyQt5.QtWidgets import (QWidget, QApplication, QDesktopWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTableWidget,
+ QTableWidgetItem, QHeaderView, QFileDialog, QTableWidgetSelectionRange, QMessageBox, QComboBox)
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
+from dialog import Dialog
+from adv_table import AdvTable
 
 
 list_of_param_alt = ['ord', 'name', 'lat', 'lon', 'time', 'date', 'cmt'] 
@@ -30,205 +31,6 @@ except:
 
 	with open('data_atr.pickle', 'wb') as file:
 		pickle.dump(atr_dict, file)
-
-
-class AdvTable(QTableWidget):
-	def __init__(self, parent):
-		super().__init__(parent)
-
-		self.main = parent
-
-		self.setAcceptDrops(True)
-
-	def dragEnterEvent(self, event):
-		data = event.mimeData()
-		urls = data.urls()
-		if urls and urls[0].scheme() == 'file':
-			event.acceptProposedAction()
-
-	def dragMoveEvent(self, event):
-		data = event.mimeData()
-		urls = data.urls()
-		if urls and urls[0].scheme() == 'file':
-			event.acceptProposedAction()
-
-	def dropEvent(self, event):
-		is_true = True
-		data = event.mimeData()
-		urls = data.urls()
-		address_list = []
-		if urls and urls[0].scheme() == 'file':
-
-			for filepath in urls:
-				abs_path = str(filepath.path())[1:]
-				extension = os.path.splitext(abs_path)[-1]
-
-				if extension not in ['.gpx', '.kml', '.xls', '.txt']:
-					is_true = False
-					break
-
-			if is_true:
-				for filepath in urls:
-					address_list.append(str(filepath.path())[1:])
-
-				self.main.total.extend(address_list)
-				self.main.from_list_to_table(self.main.total)
-			else:
-				QMessageBox.information(self, 'Сообщение', 'Неверный формат', QMessageBox.Ok)
-
-
-class Dialog(QDialog):
-	def __init__(self, root):
-		super().__init__(root)
-		self.setWindowTitle('Параметры')
-
-		self.initExl = atr_dict['exl']
-		self.initTxt = atr_dict['txt']
-		self.initSp = atr_dict['sp']
-		self.initErr = atr_dict['err']
-		self.initXY = atr_dict['xy']
-		self.initSrt = atr_dict['srt']
-
-		self.main = root
-
-		self.setMaximumSize(220, 180) 
-
-		self.label = QLabel('Дробная часть')
-		self.label2 = QLabel('Порядок вывода координат в МСК:')
-		self.label3 = QLabel('Относительная ошибка (%)')
-
-		self.btnOk = QPushButton('Ok')
-		self.btnCnsl = QPushButton('Отмена')
-		
-		self.checkExl = QCheckBox('Добавить комментарии в вывод Excel')
-		self.checkMsk = QCheckBox('Добавить имя в вывод МСК')
-		self.checkSrt = QCheckBox('Сортировка данных в выводе Excel')
-
-		# spinboxes
-		self.sp = QSpinBox()
-
-		self.sp.setRange(1, 10)
-		self.sp.setValue(10)
-
-		self.sp.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Expanding)
-		self.sp.setMaximumWidth(50)
-		self.sp.setMaximumHeight(17)
-
-		self.err = QSpinBox()
-		
-		self.err.setRange(1, 100)
-		self.err.setValue(20)
-
-		self.err.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Expanding)
-		self.err.setMaximumWidth(50)
-		self.err.setMaximumHeight(17)
-
-		# end spinboxes
-
-		self.rad1 = QRadioButton('XY (Широта, Долгота)')
-		self.rad2 = QRadioButton('YX (Долгота, Широта)')
-
-		self.rad1.setChecked(True)
-
-		self.dhbox1 = QHBoxLayout()
-		self.dhbox2 = QHBoxLayout()
-		self.dhbox3 = QHBoxLayout()
-		self.dhbox4 = QHBoxLayout()
-		self.dvbox = QVBoxLayout()
-
-		self.dhbox1.addWidget(self.rad1)
-		self.dhbox1.addWidget(self.rad2)
-																
-		self.dhbox2.addStretch(1)
-		self.dhbox2.addWidget(self.btnOk)
-		self.dhbox2.addWidget(self.btnCnsl)
-
-		self.dhbox3.addWidget(self.sp)
-		self.dhbox3.addWidget(self.label)
-
-		self.dhbox4.addWidget(self.err)
-		self.dhbox4.addWidget(self.label3)
-		
-		self.btnCnsl.clicked.connect(self.on_btnCnsl)
-		self.btnOk.clicked.connect(self.on_btnOk)
-		self.rad1.toggled.connect(lambda:self.on_rad(self.rad1))
-		self.rad2.toggled.connect(lambda:self.on_rad(self.rad2))
-
-		self.dvbox.addWidget(self.checkSrt)
-		self.dvbox.addWidget(self.checkExl)
-		self.dvbox.addWidget(self.checkMsk)
-		self.dvbox.addLayout(self.dhbox3)
-		self.dvbox.addLayout(self.dhbox4)
-		self.dvbox.addWidget(self.label2)
-		self.dvbox.addLayout(self.dhbox1)
-		self.dvbox.addLayout(self.dhbox2)
-
-		self.setLayout(self.dvbox)
-
-		self.assignWidgets()
-
-	def on_btnCnsl(self):
-		self.checkExl.setChecked(self.initExl)
-		self.checkMsk.setChecked(self.initTxt)
-		self.checkSrt.setChecked(self.initSrt)
-		self.sp.setValue(self.initSp)
-		self.err.setValue(self.initErr)
-		
-		if self.initXY == 'XY':
-			self.rad1.setChecked(True)
-		elif self.initXY == 'YX':
-			self.rad2.setChecked(True)
-		
-		self.close()
-
-	def on_btnOk(self):
-		self.main.exlCheck = self.checkExl.isChecked()
-		self.main.txtCheck = self.checkMsk.isChecked()
-		self.main.srtCheck = self.checkSrt.isChecked()
-		self.main.txtParam = self.sp.value()
-		self.main.errParam = self.err.value()
-		self.main.xy = 'XY' if self.rad1.isChecked() else 'YX'
-
-		self.initExl = self.main.exlCheck
-		self.initTxt = self.main.txtCheck
-		self.initSrt = self.main.srtCheck
-		self.initSp = self.main.txtParam
-		self.initErr = self.main.errParam
-		self.initXY = self.main.xy
-
-		atr_dict['exl'] = self.checkExl.isChecked()
-		atr_dict['txt'] = self.checkMsk.isChecked()
-		atr_dict['srt'] = self.checkSrt.isChecked()
-		atr_dict['sp'] = self.sp.value()
-		atr_dict['err'] = self.err.value()
-		atr_dict['xy'] = 'XY' if self.rad1.isChecked() else 'YX'
-
-		with open('data_atr.pickle', 'wb') as file:
-			pickle.dump(atr_dict, file)
-
-		self.close()
-
-	def assignWidgets(self):
-		self.checkExl.setChecked(atr_dict['exl'])
-		self.checkMsk.setChecked(atr_dict['txt'])
-		self.checkSrt.setChecked(atr_dict['srt'])
-		self.sp.setValue(atr_dict['sp'])
-		self.err.setValue(atr_dict['err'])
-		if atr_dict['xy'] == "XY":
-			self.rad1.setChecked(True)
-		elif atr_dict['xy'] == "YX":
-			self.rad2.setChecked(True)
-
-class Wait(QDialog):
-	def __init__(self, root):
-		super().__init__(root)
-		self.setMaximumSize(220, 180)
-		self.label = QLabel("Идет конвертация данных. Пожалуйста подождите...")
-		self.dvbox = QVBoxLayout()
-		self.dvbox.addWidget(self.label)
-		self.setLayout(self.dvbox)
-
-
 
 class Window(QWidget):
 	def __init__(self):
@@ -257,7 +59,6 @@ class Window(QWidget):
 
 		# Dialog window
 		self.dialog = Dialog(self)
-		self.wait = Wait(self)
 		# End
 
 		self.vbox = QVBoxLayout()
@@ -278,6 +79,7 @@ class Window(QWidget):
 		self.btnMerge = QPushButton('Компоновка')
 
 		self.btnJournal = QPushButton("В журнал")
+		self.mskToKml = QPushButton("МСК в Excel")
 		# --end--
 
 		# toolTips for buttons
@@ -289,6 +91,8 @@ class Window(QWidget):
 		self.btnGpxToKml.setToolTip("Конвертирует <b>gpx</b> файл в <b>kml</b> файл")
 		self.btnKmlToGpx.setToolTip("Конвертирует <b>kml</b> файл в <b>gpx</b> файл")
 		self.btnMerge.setToolTip("Объединаяет файл <b>xls</b> с координатами точек и файл <b>xls</b> со значениями мощности дозы в единый файл")
+		self.btnJournal.setToolTip("Конвертирует журнал гамма-съемки в формате <b>xls</b> в <b>gpx</b> формат")
+		self.mskToKml.setToolTip("Конвертирует файл <b>xls</b> с координатами <b>МСК</b> в <b>gpx</b> формат")
 		# End
 
 		self.combobox = QComboBox()
@@ -318,7 +122,7 @@ class Window(QWidget):
 		self.hbox_1.addWidget(self.btnGpxToKml)
 
 		self.hbox_2.addWidget(self.btnParam)
-		self.hbox_2.addStretch(1)
+		self.hbox_2.addWidget(self.mskToKml)
 		self.hbox_2.addWidget(self.btnExl)
 		self.hbox_2.addWidget(self.btnMsk)
 		self.hbox_2.addWidget(self.btnKmlToGpx)
@@ -341,12 +145,42 @@ class Window(QWidget):
 		self.btnMerge.clicked.connect(self.on_btnMerge)
 
 		self.btnJournal.clicked.connect(self.on_btnJournal)
+		self.mskToKml.clicked.connect(self.on_btnMskToKml)
 		
 		self.btnParam.clicked.connect(self.dialog.exec)
 
 		self.table.cellClicked.connect(self.cell_was_clicked)
-	
+
 	# Button clicked events
+
+	def on_btnMskToKml(self):
+		zone_key = self.combobox.currentText()
+
+		try:
+			with open('data_atr.pickle', 'rb') as file:
+				atr_dict = pickle.load(file)
+			path_f = atr_dict['path']
+		except:
+			path_f = os.getcwd()
+
+		if self.total:
+			if check_extension('.xls', self.total) and len(self.total) == 1:
+				path = QFileDialog.getSaveFileName(self, "Сохранить файл", path_f, "KML(*.kml)" )
+				
+				if path[0] != '':
+					xls_to_kml(self.total, path[0], zone_key)
+					msg = QMessageBox.information(self, 'Сообщение', 'Excel файл сконвертирован в KML файл с зоной ' + zone_key, QMessageBox.Ok)
+
+					atr_dict["path"] = os.path.dirname(path[0])
+
+					with open('data_atr.pickle', 'wb') as file:
+						pickle.dump(atr_dict, file)
+			else:
+				QMessageBox.information(self, 'Сообщение', 'Неверный формат файлов или файлов больше чем один', QMessageBox.Ok)
+		else:
+			QMessageBox.information(self, 'Сообщение', 'Пустая таблица', QMessageBox.Ok)
+
+
 	def on_btnJournal(self):
 		
 		try:
@@ -364,7 +198,7 @@ class Window(QWidget):
 				
 				path = QFileDialog.getSaveFileName(self, 'Сохранить файл', path_f, 'GPX(*.gpx)')
 				
-				if path != "":
+				if path[0] != "":
 					
 					try:
 						xls_journal_to_gpx(self.total, path[0])
@@ -537,6 +371,7 @@ class Window(QWidget):
 			path_f = atr_dict['path']
 		except:
 			path_f = os.getcwd()
+		
 		if self.total:
 			if check_extension('.gpx', self.total):
 				path = QFileDialog.getSaveFileName(self, 'Сохранить файл', path_f, 'KML(*.kml)')
@@ -610,17 +445,7 @@ class Window(QWidget):
 			if check_extension('.xls', self.total):
 				path = QFileDialog.getSaveFileName(self, 'Сохранить файл', path_f, 'XLS(*.xls)')
 				if path[0] != '':
-					# try:
-					# 	total_table(self.total, path[0], self.errParam)
-					# except:
-					# 	QMessageBox.information(self, 'Сообщение', 'Что-то пошло не так. Проверьте правильность заполнения таблиц', QMessageBox.Ok)
-					# else:
-					# 	QMessageBox.information(self, 'Сообщение', 'Общая таблица была создана', QMessageBox.Ok)
-
-					# 	atr_dict["path"] = os.path.dirname(path[0])
-
-					# 	with open('data_atr.pickle', 'wb') as file:
-					# 		pickle.dump(atr_dict, file)	
+					
 					response = total_table(self.total, path[0], self.errParam)
 
 					if response == "success":
@@ -683,23 +508,3 @@ if __name__ == '__main__':
 	win = Window()
 	win.show()
 	sys.exit(app.exec_())
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
