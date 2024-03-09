@@ -11,4 +11,4 @@ class JournalPoint:
 		self.time = time
 	
 	def __repr__(self):
-		return f"JournalPoint(id = {self.id}"
+		return f"JournalPoint(id = {self.id})"

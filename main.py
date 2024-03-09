@@ -205,13 +205,13 @@ class Window(QWidget):
 					except:
 						QMessageBox.information(self, "Сообщение", "Что-то пошло не так. Проверьте формат правильность заполнения .xls файла.")
 					else:
-						QMessageBox.information(self, 'Сообщение', 'Информация сконвертирована в файл .gpx формат', QMessageBox.Ok)
+						QMessageBox.information(self, 'Сообщение', 'Информация сконвертирована в файл .gpx формата', QMessageBox.Ok)
 
 						atr_dict["path"] = os.path.dirname(path[0])
 
 						with open('data_atr.pickle', 'wb') as file:
 							pickle.dump(atr_dict, file)
-					
+									
 			else:
 				QMessageBox.information(self, 'Сообщение', 'Неверный формат файла или файлов больше, чем один', QMessageBox.Ok)
 

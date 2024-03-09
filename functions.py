@@ -15,7 +15,7 @@ def getFormatedDateAndTime(journalPoint):
 
 	return f"{formatedDate}T{journalPoint.time}Z"
 
-def xls_journal_to_gpx(a_list, address):
+def xls_journal_to_gpx(a_list, address, createComments = False):
 	
 	file = a_list[0]
 	book = xlrd.open_workbook(file)
@@ -30,17 +30,34 @@ def xls_journal_to_gpx(a_list, address):
 		for j in range(sheet.ncols):
 			currentList.append(sheet.cell(i, j).value)
 
-		result.append(JournalPoint(
-			id = int(currentList[0]), 
-			latitude = coordMinToCoordFract(currentList[1].replace(",", ".")), 
-			longitude = coordMinToCoordFract(currentList[2].replace(",", ".")), 
-			search = currentList[3],
-			mad = currentList[4],
-			madError = round(currentList[5], 3),
-			date = currentList[6],
-			time = currentList[7]
-			))
+	
+		if createComments:
 
+			result.append(JournalPoint(
+				id = int(currentList[0]), 
+				latitude = coordMinToCoordFract(currentList[1].replace(",", ".")), 
+				longitude = coordMinToCoordFract(currentList[2].replace(",", ".")), 
+				search = currentList[3],
+				mad = currentList[4],
+				madError = round(currentList[5], 3),
+				date = currentList[6],
+				time = currentList[7]
+				))
+
+		else:
+
+			result.append(JournalPoint(
+				id = int(currentList[0]),
+				latitude = coordMinToCoordFract(currentList[1]),
+				longitude = coordMinToCoordFract(currentList[2]),
+				search = "",
+				mad = "",
+				madError = "",
+				date = currentList[3],
+				time = currentList[4]
+				))
+
+	
 	tree = et.parse('templates/gpx_template.gpx')
 	root = tree.getroot()
 
@@ -79,8 +96,9 @@ def xls_journal_to_gpx(a_list, address):
 		name = et.SubElement(wpt, "name")
 		name.text = str(journalPoint.id)
 
-		cmt = et.SubElement(wpt, "cmt")
-		cmt.text = f"Поиск {journalPoint.search} МАЭД {journalPoint.mad} Ошибка МАД {journalPoint.madError}"
+		if createComments:
+			cmt = et.SubElement(wpt, "cmt")
+			cmt.text = f"Поиск {journalPoint.search} МАЭД {journalPoint.mad} Ошибка МАД {journalPoint.madError}"
 
 		sym = et.SubElement(wpt, "sym")
 		sym.text = "Block, Red"
@@ -99,7 +117,7 @@ def xls_journal_to_gpx(a_list, address):
 	format_file(address)
 
 	
-def coordMinToCoordFract(coord, separators = ["°", "\'"]):
+def coordMinToCoordFract(coord, separators = ["º", "\'", "\""]):
 	"""Transform coordinate with minutes and seconds to coordinate with fraction part"""
 	listOfCoord = coordMinStrToList(coord, separators)
 	coordFract = float(listOfCoord[0]) + float(listOfCoord[1]) / 60 + float(listOfCoord[2]) / 3600
@@ -110,7 +128,7 @@ def coordMinStrToList(coord, separators):
 	"""Transform string coordinate with minutes and seconds to list. Example 36°24'59.124'' converts to [36, 24, 59.124]"""
 	degree, rightPart = coord.split(separators[0])
 	minute, second = rightPart.split(separators[1], 1)
-	second = second[:-2]
+	second = second.split(separators[2])[0]
 	return [degree, minute, second]
 
 def trueRound(num):
