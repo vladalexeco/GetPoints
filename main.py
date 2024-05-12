@@ -79,7 +79,7 @@ class Window(QWidget):
 		self.btnMerge = QPushButton('Компоновка')
 
 		self.btnJournal = QPushButton("В журнал")
-		self.mskToKml = QPushButton("МСК в Excel")
+		self.mskToKml = QPushButton("МСК в GPX")
 		# --end--
 
 		# toolTips for buttons
